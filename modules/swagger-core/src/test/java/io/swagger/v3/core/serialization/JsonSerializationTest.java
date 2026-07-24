@@ -25,6 +25,7 @@ import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 public class JsonSerializationTest {
@@ -43,6 +44,32 @@ public class JsonSerializationTest {
 
         final PathItem path = rebuilt.getPaths().get("/health");
         assertEquals(path, expectedPath);
+    }
+
+    @Test
+    public void testSerializeQueryHttpMethod() throws Exception {
+
+        Operation queryOperation = new Operation()
+                .operationId("searchPets")
+                .responses(new ApiResponses()
+                        .addApiResponse("200", new ApiResponse().description("ok")));
+
+        OpenAPI openAPI = new OpenAPI()
+                .path("/pets", new PathItem().query(queryOperation));
+
+        String openAPIJson = Json.mapper().writeValueAsString(openAPI);
+
+        // the OpenAPI 3.2 "query" method must be serialized ...
+        assertTrue(openAPIJson.contains("\"query\""));
+        // ... and unset methods must not leak (NON_NULL inclusion)
+        assertFalse(openAPIJson.contains("\"get\""));
+
+        OpenAPI rebuilt = Json.mapper().readValue(openAPIJson, OpenAPI.class);
+        PathItem rebuiltPath = rebuilt.getPaths().get("/pets");
+
+        assertNotNull(rebuiltPath.getQuery());
+        assertEquals(rebuiltPath.getQuery().getOperationId(), "searchPets");
+        assertEquals(rebuiltPath, openAPI.getPaths().get("/pets"));
     }
 
     @Test
