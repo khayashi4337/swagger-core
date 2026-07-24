@@ -98,6 +98,7 @@ public class Reader implements OpenApiReader {
     private static final String TRACE_METHOD = "trace";
     private static final String HEAD_METHOD = "head";
     private static final String OPTIONS_METHOD = "options";
+    private static final String QUERY_METHOD = "query";
 
     public Reader() {
         this(new OpenAPI(), new Paths(), new LinkedHashSet<>(), new Components());
@@ -1396,6 +1397,9 @@ public class Reader implements OpenApiReader {
             case OPTIONS_METHOD:
                 pathItemObject.options(operation);
                 break;
+            case QUERY_METHOD:
+                pathItemObject.query(operation);
+                break;
             default:
                 // Do nothing here
                 break;
@@ -1563,6 +1567,9 @@ public class Reader implements OpenApiReader {
         }
         if (path.getPatch() != null && StringUtils.isNotBlank(path.getPatch().getOperationId())) {
             ids.add(path.getPatch().getOperationId());
+        }
+        if (path.getQuery() != null && StringUtils.isNotBlank(path.getQuery().getOperationId())) {
+            ids.add(path.getQuery().getOperationId());
         }
         return ids;
     }
