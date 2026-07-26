@@ -3111,7 +3111,7 @@ public class ReaderTest {
 
     @Test(description = "Test ArraySchema implementation annotations")
     public void testArraySchemaImplementation() {
-        SwaggerConfiguration config = new SwaggerConfiguration().openAPI31(true).openAPI(new OpenAPI());
+        SwaggerConfiguration config = swaggerConfiguration31();
         Reader reader = new Reader(config);
 
         OpenAPI openAPI = reader.read(ArraySchemaImplementationResource.class);
@@ -3266,7 +3266,7 @@ public class ReaderTest {
 
     @Test
     public void testOas31Petstore() {
-        SwaggerConfiguration config = new SwaggerConfiguration().openAPI31(true).openAPI(new OpenAPI());
+        SwaggerConfiguration config = swaggerConfiguration31();
         Reader reader = new Reader(config);
 
         OpenAPI openAPI = reader.read(PetResource.class);
@@ -3561,7 +3561,7 @@ public class ReaderTest {
 
     @Test
     public void test31RefSiblings() {
-        SwaggerConfiguration config = new SwaggerConfiguration().openAPI31(true).openAPI(new OpenAPI());
+        SwaggerConfiguration config = swaggerConfiguration31();
         Reader reader = new Reader(config);
 
         OpenAPI openAPI = reader.read(TagResource.class);
@@ -3613,7 +3613,7 @@ public class ReaderTest {
 
     @Test
     public void testSiblings() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
 
         OpenAPI openAPI = reader.read(SiblingsResource.class);
         String yaml = """
@@ -3651,7 +3651,7 @@ public class ReaderTest {
 
     @Test
     public void testSiblingsOnResource() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
 
         OpenAPI openAPI = reader.read(SiblingsResourceSimple.class);
         String yaml = """
@@ -3691,7 +3691,7 @@ public class ReaderTest {
 
     @Test
     public void testSiblingsOnResourceResponse() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
 
         OpenAPI openAPI = reader.read(SiblingsResourceResponse.class);
         String yaml = """
@@ -3741,7 +3741,7 @@ public class ReaderTest {
 
     @Test
     public void testSiblingsOnResourceRequestBody() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
 
         OpenAPI openAPI = reader.read(SiblingsResourceRequestBody.class);
         String yaml = """
@@ -3788,7 +3788,7 @@ public class ReaderTest {
 
     @Test
     public void testSiblingsOnResourceRequestBodyMultiple() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
 
         OpenAPI openAPI = reader.read(SiblingsResourceRequestBodyMultiple.class);
         String yaml = """
@@ -3866,7 +3866,7 @@ public class ReaderTest {
 
     @Test
     public void testSiblingsOnProperty() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
         Set<Class<?>> classes = new HashSet<>(Arrays.asList(SiblingPropResource.class, WebHookResource.class));
         OpenAPI openAPI = reader.read(classes);
         String yaml = """
@@ -3957,7 +3957,7 @@ public class ReaderTest {
 
     @Test
     public void testMisc31() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
         Set<Class<?>> classes = new HashSet<>(Arrays.asList(Misc31Resource.class));
         OpenAPI openAPI = reader.read(classes);
         String yaml = """
@@ -4136,7 +4136,7 @@ public class ReaderTest {
 
     @Test
     public void testParameterMaximumValue() {
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
 
         OpenAPI openAPI = reader.read(ParameterMaximumValueResource.class);
         String yaml = """
@@ -5727,7 +5727,7 @@ public class ReaderTest {
 
     @Test
     public void TestJavaRecordRef(){
-        Reader reader = new Reader(new SwaggerConfiguration().openAPI(new OpenAPI()).openAPI31(true));
+        Reader reader = new Reader(swaggerConfiguration31());
 
         OpenAPI openAPI = reader.read(TestControllerWithRecordResource.class);
         String yaml = """
@@ -5817,5 +5817,9 @@ public class ReaderTest {
                         - write:pets
                         - read:pets""";
         SerializationMatchers.assertEqualsToYaml(openAPI, yaml);
+    }
+
+    private SwaggerConfiguration swaggerConfiguration31() {
+        return new SwaggerConfiguration().openAPI31(true).openAPI(new OpenAPI());
     }
 }
