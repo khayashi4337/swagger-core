@@ -44,6 +44,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
+import io.swagger.v3.oas.models.SpecVersion;
 import io.swagger.v3.oas.models.callbacks.Callback;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.headers.Header;
@@ -244,22 +245,30 @@ public class ObjectMapperFactory {
     }
 
     public static ObjectMapper createJson(JsonFactory jsonFactory) {
-        return create(jsonFactory, false);
+        return create(jsonFactory, SpecVersion.V30);
     }
 
     public static ObjectMapper createJson() {
-        return create(null, false);
+        return create(null, SpecVersion.V30);
     }
 
     public static ObjectMapper createYaml(YAMLFactory yamlFactory) {
-        return create(yamlFactory, false);
+        return create(yamlFactory, SpecVersion.V30);
     }
 
     public static ObjectMapper createYaml() {
-        return createYaml(false);
+        return createYaml(SpecVersion.V30);
     }
 
+    /**
+     * @deprecated Use {@link #createYaml(SpecVersion)} instead
+     */
+    @Deprecated
     public static ObjectMapper createYaml(boolean openapi31) {
+        return createYaml(openapi31 ? SpecVersion.V31 : SpecVersion.V30);
+    }
+
+    public static ObjectMapper createYaml(SpecVersion specVersion) {
         YAMLFactory factory = YAMLFactory
                 .builder()
                 .disable(YAMLWriteFeature.WRITE_DOC_START_MARKER)
@@ -268,26 +277,34 @@ public class ObjectMapperFactory {
                 .enable(YAMLWriteFeature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
                 .build();
 
-        return create(factory, openapi31);
+        return create(factory, specVersion);
     }
 
     public static ObjectMapper createJson31(TokenStreamFactory jsonFactory) {
-        return create(jsonFactory, true);
+        return create(jsonFactory, SpecVersion.V31);
     }
 
     public static ObjectMapper createJson31() {
-        return create(null, true);
+        return create(null, SpecVersion.V31);
     }
 
     public static ObjectMapper createYaml31(YAMLFactory yamlFactory) {
-        return create(yamlFactory, true);
+        return create(yamlFactory, SpecVersion.V31);
     }
 
     public static ObjectMapper createYaml31() {
-        return createYaml(true);
+        return createYaml(SpecVersion.V31);
     }
 
+    /**
+     * @deprecated Use {@link #create(TokenStreamFactory, SpecVersion)} instead
+     */
+    @Deprecated
     public static ObjectMapper create(TokenStreamFactory jsonFactory, boolean openapi31) {
+        return create(jsonFactory, openapi31 ? SpecVersion.V31 : SpecVersion.V30);
+    }
+
+    public static ObjectMapper create(TokenStreamFactory jsonFactory, SpecVersion specVersion) {
         MapperBuilder<? extends ObjectMapper, ? extends MapperBuilder<?, ?>> mapperBuilder;
         if (jsonFactory instanceof JsonFactory factory) {
             mapperBuilder = JsonMapper.builder(factory);
@@ -302,57 +319,61 @@ public class ObjectMapperFactory {
         }
         applyJackson2Compatibility(mapperBuilder);
 
-        if (!openapi31) {
-            // handle ref schema serialization skipping all other props
-            mapperBuilder.addModule(new SimpleModule() {
-                @Override
-                public void setupModule(SetupContext context) {
-                    super.setupModule(context);
-                    context.addSerializerModifier(new ValueSerializerModifier() {
-                        @Override
-                        public ValueSerializer<?> modifySerializer(
-                                SerializationConfig config, BeanDescription.Supplier desc, ValueSerializer<?> serializer) {
-                            if (Schema.class.isAssignableFrom(desc.getBeanClass())) {
-                                return new SchemaSerializer((ValueSerializer<Object>) serializer);
-                            } else if (MediaType.class.isAssignableFrom(desc.getBeanClass())) {
-                                return new MediaTypeSerializer((ValueSerializer<Object>) serializer);
-                            } else if (Example.class.isAssignableFrom(desc.getBeanClass())) {
-                                return new ExampleSerializer((ValueSerializer<Object>) serializer);
+        switch (specVersion) {
+            case V30:
+                // handle ref schema serialization skipping all other props
+                mapperBuilder.addModule(new SimpleModule() {
+                    @Override
+                    public void setupModule(SetupContext context) {
+                        super.setupModule(context);
+                        context.addSerializerModifier(new ValueSerializerModifier() {
+                            @Override
+                            public ValueSerializer<?> modifySerializer(
+                                    SerializationConfig config, BeanDescription.Supplier desc, ValueSerializer<?> serializer) {
+                                if (Schema.class.isAssignableFrom(desc.getBeanClass())) {
+                                    return new SchemaSerializer((ValueSerializer<Object>) serializer);
+                                } else if (MediaType.class.isAssignableFrom(desc.getBeanClass())) {
+                                    return new MediaTypeSerializer((ValueSerializer<Object>) serializer);
+                                } else if (Example.class.isAssignableFrom(desc.getBeanClass())) {
+                                    return new ExampleSerializer((ValueSerializer<Object>) serializer);
+                                }
+                                return serializer;
                             }
-                            return serializer;
-                        }
-                    });
-                }
-            });
-        } else {
-            mapperBuilder.addModule(new SimpleModule() {
-                @Override
-                public void setupModule(SetupContext context) {
-                    super.setupModule(context);
-                    context.addSerializerModifier(new ValueSerializerModifier() {
-                        @Override
-                        public ValueSerializer<?> modifySerializer(
-                                SerializationConfig config, BeanDescription.Supplier desc, ValueSerializer<?> serializer) {
-                            if (Schema.class.isAssignableFrom(desc.getBeanClass())) {
-                                return new Schema31Serializer((ValueSerializer<Object>) serializer);
-                            } else if (MediaType.class.isAssignableFrom(desc.getBeanClass())) {
-                                return new MediaTypeSerializer((ValueSerializer<Object>) serializer);
-                            } else if (Example.class.isAssignableFrom(desc.getBeanClass())) {
-                                return new ExampleSerializer((ValueSerializer<Object>) serializer);
+                        });
+                    }
+                });
+                break;
+            case V31:
+                mapperBuilder.addModule(new SimpleModule() {
+                    @Override
+                    public void setupModule(SetupContext context) {
+                        super.setupModule(context);
+                        context.addSerializerModifier(new ValueSerializerModifier() {
+                            @Override
+                            public ValueSerializer<?> modifySerializer(
+                                    SerializationConfig config, BeanDescription.Supplier desc, ValueSerializer<?> serializer) {
+                                if (Schema.class.isAssignableFrom(desc.getBeanClass())) {
+                                    return new Schema31Serializer((ValueSerializer<Object>) serializer);
+                                } else if (MediaType.class.isAssignableFrom(desc.getBeanClass())) {
+                                    return new MediaTypeSerializer((ValueSerializer<Object>) serializer);
+                                } else if (Example.class.isAssignableFrom(desc.getBeanClass())) {
+                                    return new ExampleSerializer((ValueSerializer<Object>) serializer);
+                                }
+                                return serializer;
                             }
-                            return serializer;
-                        }
-                    });
-                }
-            });
+                        });
+                    }
+                });
+                break;
         }
 
-        if (!openapi31) {
-            JacksonModule deserializerModule = new DeserializationModule();
-            mapperBuilder.addModule(deserializerModule);
-        } else {
-            JacksonModule deserializerModule = new DeserializationModule31();
-            mapperBuilder.addModule(deserializerModule);
+        switch (specVersion) {
+            case V30:
+                mapperBuilder.addModule(new DeserializationModule());
+                break;
+            case V31:
+                mapperBuilder.addModule(new DeserializationModule31());
+                break;
         }
 
         Map<Class<?>, Class<?>> sourceMixins = new LinkedHashMap<>();
@@ -385,36 +406,43 @@ public class ObjectMapperFactory {
         sourceMixins.put(Callback.class, ExtensionsMixin.class);
 
 
-        if (!openapi31) {
-            sourceMixins.put(Schema.class, SchemaMixin.class);
-            sourceMixins.put(DateSchema.class, DateSchemaMixin.class);
-            sourceMixins.put(Components.class, ComponentsMixin.class);
-            sourceMixins.put(Info.class, InfoMixin.class);
-            sourceMixins.put(License.class, LicenseMixin.class);
-            sourceMixins.put(OpenAPI.class, OpenAPIMixin.class);
-            sourceMixins.put(Discriminator.class, DiscriminatorMixin.class);
-        } else {
-            sourceMixins.put(Info.class, ExtensionsMixin.class);
-            sourceMixins.put(Schema.class, Schema31Mixin.class);
-            sourceMixins.put(Components.class, Components31Mixin.class);
-            sourceMixins.put(OpenAPI.class, OpenAPI31Mixin.class);
-            sourceMixins.put(DateSchema.class, DateSchemaMixin.class);
-            sourceMixins.put(Discriminator.class, Discriminator31Mixin.class);
+        switch (specVersion) {
+            case V30:
+                sourceMixins.put(Schema.class, SchemaMixin.class);
+                sourceMixins.put(DateSchema.class, DateSchemaMixin.class);
+                sourceMixins.put(Components.class, ComponentsMixin.class);
+                sourceMixins.put(Info.class, InfoMixin.class);
+                sourceMixins.put(License.class, LicenseMixin.class);
+                sourceMixins.put(OpenAPI.class, OpenAPIMixin.class);
+                sourceMixins.put(Discriminator.class, DiscriminatorMixin.class);
+                break;
+            case V31:
+                sourceMixins.put(Info.class, ExtensionsMixin.class);
+                sourceMixins.put(Schema.class, Schema31Mixin.class);
+                sourceMixins.put(Components.class, Components31Mixin.class);
+                sourceMixins.put(OpenAPI.class, OpenAPI31Mixin.class);
+                sourceMixins.put(DateSchema.class, DateSchemaMixin.class);
+                sourceMixins.put(Discriminator.class, Discriminator31Mixin.class);
+                break;
         }
         mapperBuilder.addMixIns(sourceMixins);
         configureSwaggerPolicy(mapperBuilder);
         configureSwaggerOutput(mapperBuilder);
 
-        applyCustomizers(mapperBuilder, targetFor(jsonFactory, openapi31));
+        applyCustomizers(mapperBuilder, targetFor(jsonFactory, specVersion));
         return mapperBuilder.build();
     }
 
-    private static MapperTarget targetFor(TokenStreamFactory factory, boolean openapi31) {
+    private static MapperTarget targetFor(TokenStreamFactory factory, SpecVersion specVersion) {
         boolean yaml = factory instanceof YAMLFactory;
-        if (yaml) {
-            return openapi31 ? MapperTarget.YAML31 : MapperTarget.YAML;
+        switch (specVersion) {
+            case V30:
+                return yaml ? MapperTarget.YAML : MapperTarget.JSON;
+            case V31:
+                return yaml ? MapperTarget.YAML31 : MapperTarget.JSON31;
+            default:
+                throw new IllegalArgumentException("Unknown specVersion: " + specVersion);
         }
-        return openapi31 ? MapperTarget.JSON31 : MapperTarget.JSON;
     }
 
     public static ObjectMapper createJsonConverter() {
