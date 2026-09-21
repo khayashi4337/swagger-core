@@ -69,6 +69,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -470,7 +471,7 @@ public class Reader implements OpenApiReader {
 
                 final Class<?> subResource = getSubResourceWithJaxRsSubresourceLocatorSpecs(method);
 
-                String httpMethod = ReaderUtils.extractOperationMethod(method, OpenAPIExtensions.chain());
+                String httpMethod = ReaderUtils.extractOperationMethod(method, OpenAPIExtensions.chain(), isOpenAPI32());
                 httpMethod = (httpMethod == null && isSubresource) ? parentMethod : httpMethod;
 
                 if (StringUtils.isBlank(httpMethod) && subResource == null) {
@@ -1356,6 +1357,13 @@ public class Reader implements OpenApiReader {
         }
         PathItem pathItemObject = new PathItem();
         for (io.swagger.v3.oas.annotations.Operation callbackOperation : apiCallback.operation()) {
+            if (isOpenAPI32() && StringUtils.isBlank(callbackOperation.method())) {
+                // no HTTP method declared: there is no operation slot to bind to,
+                // and a 3.2 scan must not file it under additionalOperations[""];
+                // earlier scans keep the baseline flow (the operation is built,
+                // then dropped by setPathItemOperation's unmatched branch)
+                continue;
+            }
             Operation callbackNewOperation = new Operation();
             setOperationObjectFromApiOperationAnnotation(
                     callbackNewOperation,
@@ -1375,7 +1383,13 @@ public class Reader implements OpenApiReader {
     }
 
     private void setPathItemOperation(PathItem pathItemObject, String method, Operation operation) {
-        switch (method) {
+        // for a 3.2 scan the fixed operation fields are matched case-insensitively
+        // and anything else is a custom method kept in additionalOperations with
+        // its original case; earlier scans behave like the baseline: the method
+        // string is matched as-is, so a lowercase resource method binds and an
+        // unmatched value (e.g. an uppercase callback method) is dropped
+        boolean openapi32 = isOpenAPI32();
+        switch (openapi32 ? method.toLowerCase(Locale.ENGLISH) : method) {
             case POST_METHOD:
                 pathItemObject.post(operation);
                 break;
@@ -1401,10 +1415,14 @@ public class Reader implements OpenApiReader {
                 pathItemObject.options(operation);
                 break;
             case QUERY_METHOD:
-                pathItemObject.query(operation);
+                if (openapi32) {
+                    pathItemObject.query(operation);
+                }
                 break;
             default:
-                // Do nothing here
+                if (openapi32) {
+                    pathItemObject.addAdditionalOperation(method, operation);
+                }
                 break;
         }
     }
@@ -1561,6 +1579,16 @@ public class Reader implements OpenApiReader {
 
     private Set<String> extractOperationIdFromPathItem(PathItem path) {
         Set<String> ids = new HashSet<>();
+        if (isOpenAPI32()) {
+            // a 3.2 scan deduplicates operationIds across every operation,
+            // including query and additionalOperations
+            for (Operation operation : path.readOperations()) {
+                if (operation != null && StringUtils.isNotBlank(operation.getOperationId())) {
+                    ids.add(operation.getOperationId());
+                }
+            }
+            return ids;
+        }
         if (path.getGet() != null && StringUtils.isNotBlank(path.getGet().getOperationId())) {
             ids.add(path.getGet().getOperationId());
         }
@@ -1581,9 +1609,6 @@ public class Reader implements OpenApiReader {
         }
         if (path.getPatch() != null && StringUtils.isNotBlank(path.getPatch().getOperationId())) {
             ids.add(path.getPatch().getOperationId());
-        }
-        if (path.getQuery() != null && StringUtils.isNotBlank(path.getQuery().getOperationId())) {
-            ids.add(path.getQuery().getOperationId());
         }
         return ids;
     }

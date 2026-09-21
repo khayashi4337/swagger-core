@@ -9,8 +9,9 @@ import java.util.Map;
 /**
  * Mixin applied to {@link io.swagger.v3.oas.models.PathItem} for the OpenAPI 3.2 mapper.
  *
- * <p>Identical to {@link PathItemMixin} except that {@code query} is not ignored: the
- * {@code query} HTTP method is a fixed field of the Path Item Object as of OpenAPI 3.2.
+ * <p>Identical to {@link PathItemMixin} except that {@code query} and
+ * {@code additionalOperations} are not ignored: the {@code query} HTTP method and
+ * named additional operations are Path Item Object fields as of OpenAPI 3.2.
  */
 public abstract class PathItem32Mixin {
 
