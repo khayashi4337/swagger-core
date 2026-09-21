@@ -20,9 +20,14 @@ import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.SpecVersion;
 import io.swagger.v3.oas.models.callbacks.Callback;
+import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.media.Discriminator;
 import io.swagger.v3.oas.models.media.JsonSchema;
+import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.XML;
 import io.swagger.v3.oas.models.parameters.CookieParameter;
 import io.swagger.v3.oas.models.parameters.HeaderParameter;
 import io.swagger.v3.oas.models.parameters.Parameter;
@@ -30,8 +35,11 @@ import io.swagger.v3.oas.models.parameters.PathParameter;
 import io.swagger.v3.oas.models.parameters.QueryParameter;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.OAuthFlow;
 import io.swagger.v3.oas.models.security.OAuthFlows;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -308,6 +316,158 @@ public class OpenAPI3_2SerializationTest {
         String s30 = doc.toString();
         assertFalse(s30.contains("webhooks:"), "V30 toString must not print webhooks");
         assertFalse(s30.contains("jsonSchemaDialect:"), "V30 toString must not print jsonSchemaDialect");
+    }
+
+    // ---- simple fixed-field additions ----
+
+    private OpenAPI buildFixedFields32Doc() {
+        return new OpenAPI()
+                .openapi("3.2.0")
+                .info(new Info().title("t").version("1"))
+                .addServersItem(new Server().url("https://api.example.com").name("production"))
+                .addTagsItem(new Tag().name("pets").summary("Pet operations").parent("animals").kind("nav"))
+                .paths(new Paths().addPathItem("/pets", new PathItem().get(
+                        new Operation().operationId("getPets").responses(
+                                new ApiResponses().addApiResponse("200",
+                                        new ApiResponse().description("ok").summary("pet list")
+                                                .content(new Content().addMediaType("application/json",
+                                                        new MediaType().itemSchema(new Schema().typesItem("string")))))))))
+                .components(new Components()
+                        .addExamples("dataEx", new Example().summary("s").dataValue(java.util.Collections.singletonMap("a", 1)))
+                        .addExamples("serEx", new Example().serializedValue("{\"a\":1}"))
+                        .addSecuritySchemes("oauth", new SecurityScheme()
+                                .type(SecurityScheme.Type.OAUTH2)
+                                .deprecated(true)
+                                .oauth2MetadataUrl("https://auth.example.com/.well-known/oauth-authorization-server")
+                                .flows(new OAuthFlows()
+                                        .deviceAuthorization(
+                                                new OAuthFlow().deviceAuthorizationUrl("https://auth.example.com/device")
+                                                        .tokenUrl("https://auth.example.com/token"))
+                                        // authorizationCode binds in all versions; it exercises the
+                                        // OAuthFlow mixin hiding deviceAuthorizationUrl on its own
+                                        .authorizationCode(
+                                                new OAuthFlow().authorizationUrl("https://auth.example.com/authorize")
+                                                        .tokenUrl("https://auth.example.com/token")
+                                                        .deviceAuthorizationUrl("https://auth.example.com/device"))))
+                        .addSchemas("Pet", new Schema()
+                                .type("object")
+                                .discriminator(new Discriminator().propertyName("petType").defaultMapping("Dog"))
+                                .xml(new XML().nodeType("element"))));
+    }
+
+    @Test
+    public void newFields32SerializeAndRoundTrip() throws Exception {
+        String out = Json32.mapper().writeValueAsString(buildFixedFields32Doc());
+        for (String token : new String[]{
+                "\"name\":\"production\"",
+                "\"summary\":\"Pet operations\"",
+                "\"parent\":\"animals\"",
+                "\"kind\":\"nav\"",
+                "\"summary\":\"pet list\"",
+                "\"itemSchema\":",
+                "\"dataValue\":",
+                "\"serializedValue\":\"{\\\"a\\\":1}\"",
+                "\"deprecated\":true",
+                "\"oauth2MetadataUrl\":",
+                "\"deviceAuthorization\":",
+                "\"deviceAuthorizationUrl\":",
+                "\"defaultMapping\":\"Dog\"",
+                "\"nodeType\":\"element\""}) {
+            assertTrue(out.contains(token), "3.2 JSON output must contain " + token + " : " + out);
+        }
+
+        OpenAPI readBack = Json32.mapper().readValue(out, OpenAPI.class);
+        assertEquals(readBack.getServers().get(0).getName(), "production");
+        Tag tag = readBack.getTags().get(0);
+        assertEquals(tag.getSummary(), "Pet operations");
+        assertEquals(tag.getParent(), "animals");
+        assertEquals(tag.getKind(), "nav");
+        ApiResponse resp = readBack.getPaths().get("/pets").getGet().getResponses().get("200");
+        assertEquals(resp.getSummary(), "pet list");
+        // 3.1-family schema deserialization normalizes `type` into the `types` set
+        assertTrue(resp.getContent().get("application/json").getItemSchema().getTypes().contains("string"));
+        assertNotNull(readBack.getComponents().getExamples().get("dataEx").getDataValue());
+        assertEquals(readBack.getComponents().getExamples().get("serEx").getSerializedValue(), "{\"a\":1}");
+        SecurityScheme scheme = readBack.getComponents().getSecuritySchemes().get("oauth");
+        assertEquals(scheme.getDeprecated(), Boolean.TRUE);
+        assertNotNull(scheme.getOauth2MetadataUrl());
+        assertEquals(scheme.getFlows().getDeviceAuthorization().getDeviceAuthorizationUrl(),
+                "https://auth.example.com/device");
+        assertEquals(scheme.getFlows().getAuthorizationCode().getDeviceAuthorizationUrl(),
+                "https://auth.example.com/device");
+        Schema pet = readBack.getComponents().getSchemas().get("Pet");
+        assertEquals(pet.getDiscriminator().getDefaultMapping(), "Dog");
+        assertEquals(pet.getXml().getNodeType(), "element");
+    }
+
+    @Test
+    public void newFields32HiddenIn30And31() throws Exception {
+        OpenAPI doc = buildFixedFields32Doc();
+        for (tools.jackson.databind.ObjectMapper m :
+                new tools.jackson.databind.ObjectMapper[]{Json.mapper(), Json31.mapper()}) {
+            String out = m.writeValueAsString(doc);
+            assertFalse(out.contains("production"), "must not emit Server.name: " + out);
+            assertFalse(out.contains("Pet operations"), "must not emit Tag.summary: " + out);
+            assertFalse(out.contains("animals"), "must not emit Tag.parent: " + out);
+            assertFalse(out.contains("nav"), "must not emit Tag.kind: " + out);
+            assertFalse(out.contains("pet list"), "must not emit Response.summary: " + out);
+            assertFalse(out.contains("itemSchema"), "must not emit MediaType.itemSchema: " + out);
+            assertFalse(out.contains("dataValue"), "must not emit Example.dataValue: " + out);
+            assertFalse(out.contains("serializedValue"), "must not emit Example.serializedValue: " + out);
+            assertFalse(out.contains("\"deprecated\":true"), "must not emit SecurityScheme.deprecated: " + out);
+            assertFalse(out.contains("oauth2MetadataUrl"), "must not emit SecurityScheme.oauth2MetadataUrl: " + out);
+            assertFalse(out.contains("deviceAuthorization"), "must not emit OAuthFlows.deviceAuthorization: " + out);
+            assertFalse(out.contains("defaultMapping"), "must not emit Discriminator.defaultMapping: " + out);
+            assertFalse(out.contains("nodeType"), "must not emit XML.nodeType: " + out);
+        }
+    }
+
+    @Test
+    public void newFields32IgnoredIn31Deserialization() throws Exception {
+        String doc = "openapi: 3.1.0\n" +
+                "info:\n  title: t\n  version: '1'\n" +
+                "servers:\n  - url: https://api.example.com\n    name: production\n" +
+                "tags:\n  - name: pets\n    summary: s\n    parent: animals\n    kind: nav\n" +
+                "paths: {}\n" +
+                "components:\n" +
+                "  securitySchemes:\n" +
+                "    oauth:\n" +
+                "      type: oauth2\n" +
+                "      deprecated: true\n" +
+                "      oauth2MetadataUrl: https://auth.example.com/meta\n" +
+                "      flows:\n" +
+                "        deviceAuthorization:\n" +
+                "          deviceAuthorizationUrl: https://auth.example.com/device\n" +
+                "          tokenUrl: https://auth.example.com/token\n" +
+                "        authorizationCode:\n" +
+                "          authorizationUrl: https://auth.example.com/authorize\n" +
+                "          tokenUrl: https://auth.example.com/token\n" +
+                "          deviceAuthorizationUrl: https://auth.example.com/device\n";
+        OpenAPI readBack = Yaml31.mapper().readValue(doc, OpenAPI.class);
+        assertNull(readBack.getServers().get(0).getName(), "3.1 mapper must not bind Server.name");
+        assertNull(readBack.getTags().get(0).getSummary(), "3.1 mapper must not bind Tag.summary");
+        SecurityScheme scheme = readBack.getComponents().getSecuritySchemes().get("oauth");
+        assertNull(scheme.getDeprecated(), "3.1 mapper must not bind SecurityScheme.deprecated");
+        assertNull(scheme.getOauth2MetadataUrl(), "3.1 mapper must not bind SecurityScheme.oauth2MetadataUrl");
+        assertNull(scheme.getFlows().getDeviceAuthorization(), "3.1 mapper must not bind flows.deviceAuthorization");
+        assertNotNull(scheme.getFlows().getAuthorizationCode(), "authorizationCode itself must bind in 3.1");
+        assertNull(scheme.getFlows().getAuthorizationCode().getDeviceAuthorizationUrl(),
+                "3.1 mapper must not bind OAuthFlow.deviceAuthorizationUrl");
+    }
+
+    @Test
+    public void exampleNullDataValueSerializes() throws Exception {
+        // dataValue of type 'any' may legitimately be null: the set-flag mirrors valueSetFlag
+        OpenAPI doc = buildDoc();
+        doc.setComponents(new Components().addExamples("nullEx", new Example().dataValue(null)));
+        String out = Json32.mapper().writeValueAsString(doc);
+        assertTrue(out.contains("\"dataValue\":null"), "explicit null dataValue must serialize: " + out);
+
+        // the explicit-null write path must not leak the field to earlier versions either
+        String out30 = Json.mapper().writeValueAsString(doc);
+        assertFalse(out30.contains("dataValue"), "3.0 must not emit dataValue even when set-flag is on: " + out30);
+        String out31 = Json31.mapper().writeValueAsString(doc);
+        assertFalse(out31.contains("dataValue"), "3.1 must not emit dataValue even when set-flag is on: " + out31);
     }
 
     @Test
@@ -681,5 +841,26 @@ public class OpenAPI3_2SerializationTest {
         assertNotNull(pet);
         assertTrue(JSON32_ROUTED.contains(pet),
                 "components.schemas values must be converted on the Json32 mapper (Model32Deserializer)");
+    }
+
+    @Test
+    public void discriminatorExtensionsSurviveConverter() {
+        // the converter mapper feeds the 3.0 -> 3.1 conversion; 3.1 allows
+        // Discriminator extensions, so x- keys must survive into the converted map
+        Schema<?> schema = new Schema<>()
+                .type("object")
+                .discriminator(new Discriminator().propertyName("petType").defaultMapping("Dog"));
+        schema.getDiscriminator().addExtension("x-pet-kind", "animal");
+        Map<String, Object> converted = io.swagger.v3.core.util.ObjectMapperFactory.createJsonConverter()
+                .convertValue(schema, Map.class);
+        Object discriminator = converted.get("discriminator");
+        assertTrue(discriminator instanceof Map, "converted schema must contain a discriminator map: " + converted);
+        Map<?, ?> discriminatorMap = (Map<?, ?>) discriminator;
+        assertEquals(discriminatorMap.get("x-pet-kind"), "animal",
+                "converter must keep discriminator x- extensions as flattened keys");
+        assertFalse(discriminatorMap.containsKey("defaultMapping"),
+                "converter must not emit the 3.2 defaultMapping field");
+        assertFalse(discriminatorMap.containsKey("extensions"),
+                "extensions must be flattened, not nested under an 'extensions' key");
     }
 }

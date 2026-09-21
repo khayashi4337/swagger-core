@@ -64,6 +64,13 @@ public class SecuritySchemeDeserializer extends ValueDeserializer<SecurityScheme
                 result
                         .type(SecurityScheme.Type.MUTUALTLS);
             }
+            if (specVersion() == SpecVersion.V32) {
+                JsonNode deprecatedNode = node.get("deprecated");
+                if (deprecatedNode != null && deprecatedNode.isBoolean()) {
+                    result.setDeprecated(deprecatedNode.booleanValue());
+                }
+                result.setOauth2MetadataUrl(getFieldText("oauth2MetadataUrl", node));
+            }
             final Iterator<String> fieldNames = node.propertyNames().iterator();
             while(fieldNames.hasNext()) {
                 final String fieldName = fieldNames.next();
