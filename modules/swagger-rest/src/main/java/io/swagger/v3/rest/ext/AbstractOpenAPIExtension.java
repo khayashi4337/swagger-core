@@ -21,6 +21,7 @@ public abstract class AbstractOpenAPIExtension implements OpenAPIExtension {
     protected boolean openapi31;
     protected Schema.SchemaResolution schemaResolution;
     protected Configuration configuration = new Configuration();
+    private boolean explicitConfiguration;
 
     @Override
     public String extractOperationMethod(Method method, Iterator<OpenAPIExtension> chain) {
@@ -36,7 +37,14 @@ public abstract class AbstractOpenAPIExtension implements OpenAPIExtension {
                                                Components components, jakarta.ws.rs.Consumes classConsumes,
                                                jakarta.ws.rs.Consumes methodConsumes, boolean includeRequestBody, JsonView jsonViewAnnotation, Iterator<OpenAPIExtension> chain) {
         if (chain.hasNext()) {
-            return chain.next().extractParameters(annotations, type, typesToSkip, components, classConsumes, methodConsumes, includeRequestBody, jsonViewAnnotation, chain);
+            OpenAPIExtension next = chain.next();
+            if (explicitConfiguration) {
+                // hand the scan configuration to the delegate so version-gated
+                // parameter handling (e.g. in: querystring for OpenAPI 3.2) still
+                // applies behind delegating extensions
+                next.setConfiguration(configuration);
+            }
+            return next.extractParameters(annotations, type, typesToSkip, components, classConsumes, methodConsumes, includeRequestBody, jsonViewAnnotation, chain);
         } else {
             return new ResolvedParameter();
         }
@@ -80,10 +88,28 @@ public abstract class AbstractOpenAPIExtension implements OpenAPIExtension {
     @Override
     public void setConfiguration(Configuration configuration) {
         this.configuration = configuration;
+        this.explicitConfiguration = configuration != null;
         if (configuration != null) {
             this.openapi31 = configuration.isOpenAPI31() != null ? configuration.isOpenAPI31() : false;
             this.schemaResolution = configuration.getSchemaResolution();
         }
+    }
+
+    /**
+     * The configuration to use for parameter processing: the scan configuration
+     * assigned through {@link #setConfiguration(Configuration)} when present,
+     * otherwise one built from the values set via {@link #setOpenAPI31(boolean)}
+     * and {@link #setSchemaResolution(Schema.SchemaResolution)} so the dedicated
+     * setters keep affecting parameter generation as they did before.
+     */
+    protected Configuration effectiveConfiguration() {
+        if (explicitConfiguration) {
+            return configuration;
+        }
+        Configuration effective = new Configuration();
+        effective.setOpenAPI31(openapi31);
+        effective.setSchemaResolution(schemaResolution);
+        return effective;
     }
 
 }

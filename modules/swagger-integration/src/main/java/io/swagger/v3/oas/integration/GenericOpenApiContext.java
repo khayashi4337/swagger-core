@@ -20,8 +20,11 @@ import io.swagger.v3.core.jackson.mixin.Schema31Mixin;
 import io.swagger.v3.core.util.Configuration;
 import io.swagger.v3.core.util.Json;
 import io.swagger.v3.core.util.Json31;
+import io.swagger.v3.core.util.Json32;
+import io.swagger.v3.core.util.ParameterProcessor;
 import io.swagger.v3.core.util.Yaml;
 import io.swagger.v3.core.util.Yaml31;
+import io.swagger.v3.core.util.Yaml32;
 import io.swagger.v3.oas.integration.api.ObjectMapperProcessor;
 import io.swagger.v3.oas.integration.api.OpenAPIConfiguration;
 import io.swagger.v3.oas.integration.api.OpenApiConfigurationLoader;
@@ -541,15 +544,20 @@ public class GenericOpenApiContext<T extends GenericOpenApiContext> implements O
             if (modelConverters == null || modelConverters.isEmpty()) {
                 modelConverters = buildModelConverters(ContextUtils.deepCopy(openApiConfiguration));
             }
+            boolean openapi32 = ParameterProcessor.isOpenAPI32(openApiConfiguration.toConfiguration());
             if (outputJsonMapper == null) {
-                if (Boolean.TRUE.equals(openApiConfiguration.isOpenAPI31())) {
+                if (openapi32) {
+                    outputJsonMapper = Json32.mapper();
+                } else if (Boolean.TRUE.equals(openApiConfiguration.isOpenAPI31())) {
                     outputJsonMapper = Json31.mapper();
                 } else {
                     outputJsonMapper = Json.mapper();
                 }
             }
             if (outputYamlMapper == null) {
-                if (Boolean.TRUE.equals(openApiConfiguration.isOpenAPI31())) {
+                if (openapi32) {
+                    outputYamlMapper = Yaml32.mapper();
+                } else if (Boolean.TRUE.equals(openApiConfiguration.isOpenAPI31())) {
                     outputYamlMapper = Yaml31.mapper();
                 } else {
                     outputYamlMapper = Yaml.mapper();
@@ -562,7 +570,7 @@ public class GenericOpenApiContext<T extends GenericOpenApiContext> implements O
                 yamlMapperBuilder.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
                 jsonMapperBuilder.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
                 yamlMapperBuilder.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-                if (Boolean.TRUE.equals(openApiConfiguration.isOpenAPI31())) {
+                if (openapi32 || Boolean.TRUE.equals(openApiConfiguration.isOpenAPI31())) {
                     jsonMapperBuilder.addMixIn(OpenAPI.class, SortedOpenAPIMixin31.class);
                     jsonMapperBuilder.addMixIn(Schema.class, SortedSchemaMixin31.class);
                     yamlMapperBuilder.addMixIn(OpenAPI.class, SortedOpenAPIMixin31.class);

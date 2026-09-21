@@ -59,6 +59,24 @@
     </servlet>
 
     <servlet>
+        <servlet-name>oas32</servlet-name>
+        <servlet-class>io.swagger.v3.rest.integration.OpenApiServlet</servlet-class>
+
+        <init-param>
+            <param-name>openApi.configuration.openAPI31</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <init-param>
+            <param-name>openApi.configuration.openAPIVersion</param-name>
+            <param-value>3.2.0</param-value>
+        </init-param>
+        <init-param>
+            <param-name>openApi.configuration.resourceClasses</param-name>
+            <param-value>io.swagger.v3.rest.it.resources32.QueryStringItResource</param-value>
+        </init-param>
+    </servlet>
+
+    <servlet>
         <servlet-name>bootstrap</servlet-name>
         <servlet-class>io.swagger.v3.rest.BootstrapServlet</servlet-class>
     </servlet>
@@ -71,6 +89,11 @@
     <servlet-mapping>
         <servlet-name>oas</servlet-name>
         <url-pattern>/oas/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>oas32</servlet-name>
+        <url-pattern>/oas32/*</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>

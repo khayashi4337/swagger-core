@@ -8,6 +8,7 @@ import io.swagger.v3.core.jackson.ModelResolver;
 import io.swagger.v3.oas.annotations.enums.Explode;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
@@ -331,6 +332,33 @@ public class ParameterProcessor {
         if (StringUtils.isNotBlank(p.style().toString())) {
             parameter.setStyle(Parameter.StyleEnum.valueOf(p.style().toString().toUpperCase()));
         }
+    }
+
+    /**
+     * Whether the given configuration targets OpenAPI 3.2: either the configured
+     * {@code openAPIVersion} or the seed document's {@code openapi} field starts
+     * with "3.2". Shared by the reader, parameter processing and output-mapper
+     * selection so 3.2 detection is defined in a single place.
+     */
+    public static boolean isOpenAPI32(Configuration configuration) {
+        if (configuration == null) {
+            return false;
+        }
+        return isOpenAPI32(configuration.getOpenAPIVersion(), configuration.getOpenAPI());
+    }
+
+    /**
+     * Whether the given version string / seed document targets OpenAPI 3.2;
+     * the single definition of 3.2 detection, also used by call sites (e.g.
+     * the JAX-RS reader) whose configuration is not a {@link Configuration}.
+     */
+    public static boolean isOpenAPI32(String openAPIVersion, OpenAPI openAPI) {
+        if (openAPIVersion != null && openAPIVersion.startsWith("3.2")) {
+            return true;
+        }
+        return openAPI != null
+                && openAPI.getOpenapi() != null
+                && openAPI.getOpenapi().startsWith("3.2");
     }
 
     public static Annotation getParamSchemaAnnotation(List<Annotation> annotations) {

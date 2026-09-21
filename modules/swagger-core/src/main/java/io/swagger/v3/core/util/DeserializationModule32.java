@@ -12,6 +12,13 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 
+/**
+ * Jackson module of the OpenAPI 3.2 mapper. Inherits the 3.1 registrations, then
+ * un-gates the 3.2 additions: the 'cookie' parameter style serializer is
+ * re-registered without the version check, the serializer modifier rejecting
+ * {@code in: "querystring"} is cleared, and the deserializer modifier is
+ * replaced so {@link Parameter.StyleEnum} accepts 'cookie' again.
+ */
 public class DeserializationModule32 extends DeserializationModule31 {
 
     public DeserializationModule32() {
@@ -22,6 +29,10 @@ public class DeserializationModule32 extends DeserializationModule31 {
         this.addDeserializer(ApiResponses.class, new ApiResponses32Deserializer());
         this.addDeserializer(Paths.class, new Paths32Deserializer());
         this.addDeserializer(Callback.class, new Callback32Deserializer());
+
+        // clear the serializer modifier inherited from the 3.1 module, which
+        // rejects QueryStringParameter; the 3.2 mapper must serialize it
+        this.setSerializerModifier(null);
 
         this.setDeserializerModifier(new ValueDeserializerModifier()
         {

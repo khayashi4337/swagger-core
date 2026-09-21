@@ -686,6 +686,50 @@ public class OpenApiResourceIT extends AbstractAnnotationTest {
     }
 
     @Test
+    public void testServletOpenAPI32ServesQueryString() throws Exception {
+        // a 3.2-configured context must select the 3.2 output mapper: serving a
+        // document carrying in: querystring through a 3.1 mapper returned 500
+        final String actualBody = given()
+                .port(jettyPort)
+                .log().all()
+                .when()
+                .get("/oas32/openapi.json")
+                .then()
+                .log().all()
+                .assertThat()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .extract().response().body().asString();
+
+        assertTrue(actualBody.contains("\"openapi\": \"3.2.0\"")
+                        || actualBody.contains("\"openapi\":\"3.2.0\""),
+                "must emit a 3.2 document: " + actualBody);
+        assertTrue(actualBody.contains("querystring"),
+                "must emit in: querystring: " + actualBody);
+    }
+
+    @Test
+    public void testServletOpenAPI32ServesQueryStringYaml() throws Exception {
+        final String actualBody = given()
+                .port(jettyPort)
+                .log().all()
+                .accept("application/yaml")
+                .when()
+                .get("/oas32/openapi.yaml")
+                .then()
+                .log().all()
+                .assertThat()
+                .statusCode(200)
+                .contentType("application/yaml")
+                .extract().response().body().asString();
+
+        assertTrue(actualBody.contains("openapi: 3.2.0"),
+                "must emit a 3.2 document: " + actualBody);
+        assertTrue(actualBody.contains("querystring"),
+                "must emit in: querystring: " + actualBody);
+    }
+
+    @Test
     public void testYamlOpenAPI31WithBootstrapServlet() throws Exception {
         final String actualBody = given()
                 .port(jettyPort)

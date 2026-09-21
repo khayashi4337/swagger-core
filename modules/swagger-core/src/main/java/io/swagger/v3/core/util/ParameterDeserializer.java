@@ -2,6 +2,7 @@ package io.swagger.v3.core.util;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DatabindException;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.models.parameters.HeaderParameter;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.PathParameter;
 import io.swagger.v3.oas.models.parameters.QueryParameter;
+import io.swagger.v3.oas.models.parameters.QueryStringParameter;
 import tools.jackson.databind.ValueDeserializer;
 import tools.jackson.databind.cfg.EnumFeature;
 
@@ -55,9 +57,18 @@ public class ParameterDeserializer extends ValueDeserializer<Parameter> {
                 reader = mapper.readerFor(PathParameter.class);
             } else if ("cookie".equals(in)) {
                 reader = mapper.readerFor(CookieParameter.class);
+            } else if ("querystring".equals(in) && specVersion() == SpecVersion.V32) {
+                reader = mapper.readerFor(QueryStringParameter.class);
             }
             if (reader != null) {
                 result = reader.with(EnumFeature.READ_ENUMS_USING_TO_STRING).readValue(node);
+                if (result != null && result.getStyle() == Parameter.StyleEnum.COOKIE
+                        && specVersion() != SpecVersion.V32) {
+                    // 'cookie' parameter style was added in OpenAPI 3.2; reject it for
+                    // earlier versions to preserve the previous unknown-enum failure
+                    throw DatabindException.from(jp,
+                            "Parameter style 'cookie' requires OpenAPI 3.2");
+                }
             }
         }
 

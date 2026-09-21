@@ -9,10 +9,13 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import org.testng.annotations.Test;
 
+import java.util.Collections;
+
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Verifies that the reader maps a custom {@code @HttpMethod("QUERY")} annotation
@@ -51,5 +54,24 @@ public class QueryMethodTest {
             assertFalse(serialized.contains("query"));
             assertFalse(serialized.contains("searchPets"));
         }
+    }
+
+    @Test(description = "the legacy setOpenAPI31 setter still drives 3.1 parameter schemas")
+    public void testLegacyOpenAPI31SetterStillApplies() {
+        // without an explicit configuration the dedicated setters must keep
+        // affecting parameter generation, as they did before the scan
+        // configuration object was introduced
+        DefaultParameterExtension extension = new DefaultParameterExtension();
+        extension.setOpenAPI31(true);
+        ResolvedParameter resolved = extension.extractParameters(
+                Collections.<java.lang.annotation.Annotation>emptyList(),
+                String.class, new java.util.HashSet<java.lang.reflect.Type>(),
+                new io.swagger.v3.oas.models.Components(), null, null, true, null,
+                Collections.<io.swagger.v3.rest.ext.OpenAPIExtension>emptyList().iterator());
+        assertNotNull(resolved.requestBody);
+        io.swagger.v3.oas.models.media.Schema<?> schema = resolved.requestBody.getSchema();
+        assertNotNull(schema, "request body parameter must carry a resolved schema");
+        assertTrue(schema instanceof io.swagger.v3.oas.models.media.JsonSchema,
+                "setOpenAPI31(true) must keep producing 3.1 JsonSchema, got " + schema.getClass());
     }
 }
