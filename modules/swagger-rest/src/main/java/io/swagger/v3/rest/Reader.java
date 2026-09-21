@@ -13,6 +13,7 @@ import io.swagger.v3.core.converter.ResolvedSchema;
 import io.swagger.v3.core.util.AnnotationsUtils;
 import io.swagger.v3.core.util.Json;
 import io.swagger.v3.core.util.Json31;
+import io.swagger.v3.core.util.Json32;
 import io.swagger.v3.core.util.KotlinDetector;
 import io.swagger.v3.core.util.ParameterProcessor;
 import io.swagger.v3.core.util.PathUtils;
@@ -1260,7 +1261,9 @@ public class Reader implements OpenApiReader {
         if(mediaType == null)
             return mediaType;
         try {
-            if(config.isOpenAPI31()) {
+            if (isOpenAPI32()) {
+                mediaType = Json32.mapper().readValue(Json32.pretty(mediaType), MediaType.class);
+            } else if(config.isOpenAPI31()) {
                 mediaType = Json31.mapper().readValue(Json31.pretty(mediaType), MediaType.class);
             } else {
                 mediaType = Json.mapper().readValue(Json.pretty(mediaType), MediaType.class);
@@ -1404,6 +1407,17 @@ public class Reader implements OpenApiReader {
                 // Do nothing here
                 break;
         }
+    }
+
+    /**
+     * Whether the current scan targets OpenAPI 3.2; delegates to
+     * {@link ParameterProcessor#isOpenAPI32(String, OpenAPI)} so 3.2 detection
+     * is defined in one place: either the configured {@code openAPIVersion} or
+     * the seed document's {@code openapi} field starts with "3.2".
+     */
+    private boolean isOpenAPI32() {
+        return config != null
+                && ParameterProcessor.isOpenAPI32(config.getOpenAPIVersion(), config.getOpenAPI());
     }
 
     protected void setOperationObjectFromApiOperationAnnotation(
