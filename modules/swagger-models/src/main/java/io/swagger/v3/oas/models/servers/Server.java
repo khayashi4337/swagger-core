@@ -61,7 +61,7 @@ public class Server {
     /**
      * returns the name property from a Server instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String name
      **/
 

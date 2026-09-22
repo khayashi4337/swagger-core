@@ -90,7 +90,7 @@ public class Example {
      * returns the dataValue property from a Example instance.
      * Mutually exclusive with {@code value} in 3.2 documents.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return Object dataValue
      **/
 
@@ -116,7 +116,7 @@ public class Example {
      * Mutually exclusive with {@code value} and {@code externalValue} in 3.2
      * documents.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String serializedValue
      **/
 

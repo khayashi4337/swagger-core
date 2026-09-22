@@ -47,7 +47,7 @@ public class Tag {
     /**
      * returns the summary property from a Tag instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String summary
      **/
 
@@ -108,7 +108,7 @@ public class Tag {
     /**
      * returns the parent property from a Tag instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String parent
      **/
 
@@ -131,7 +131,7 @@ public class Tag {
     /**
      * returns the kind property from a Tag instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String kind
      **/
 

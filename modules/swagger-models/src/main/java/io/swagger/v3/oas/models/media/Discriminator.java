@@ -10,7 +10,7 @@ import java.util.Objects;
 public class Discriminator {
     private String propertyName;
     /**
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private String defaultMapping;
@@ -38,7 +38,7 @@ public class Discriminator {
     /**
      * returns the defaultMapping property from a Discriminator instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String defaultMapping
      **/
     @OpenAPI32

@@ -248,6 +248,20 @@ public class SpecFilter {
     // signature stays intact for overrides
     private final ThreadLocal<SpecVersion> filterSpecVersion = new ThreadLocal<>();
 
+    /**
+     * Whether the document being filtered is an OpenAPI 3.2 document, as resolved
+     * for the enclosing {@link #filter} call (or set by
+     * {@link #removeBrokenReferenceDefinitions} when that method is invoked
+     * directly). Reference collection is version-gated: traversal additions made
+     * for 3.2 (encoding headers, nested encodings, itemSchema, content-map $ref
+     * values, discriminator defaultMapping, additionalOperations and
+     * components.mediaTypes) must not change which schema references are
+     * retained for 3.0/3.1 documents.
+     */
+    private boolean isFilteringSpecVersion32() {
+        return SpecVersion.V32.equals(filterSpecVersion.get());
+    }
+
     protected Map<String, Schema> filterComponentsSchema(OpenAPISpecFilter filter, Map<String, Schema> schemasMap, Map<String, List<String>> params, Map<String, String> cookies, Map<String, List<String>> headers) {
         return filterComponentsSchema(filter, schemasMap, params, cookies, headers, filterSpecVersion.get());
     }
@@ -321,7 +335,7 @@ public class SpecFilter {
                     Schema clonedModel;
                     if (SpecVersion.V32.equals(specVersion)) {
                         clonedModel = Json32.mapper().readValue(Json32.pretty(definition), Schema.class);
-                    } else if (SpecVersion.V31.equals(specVersion) || filter.isOpenAPI31Filter()) {
+                    } else if (filter.isOpenAPI31Filter()) {
                         clonedModel = Json31.mapper().readValue(Json31.pretty(definition), Schema.class);
                     } else {
                         clonedModel = Json.mapper().readValue(Json.pretty(definition), Schema.class);
@@ -354,12 +368,23 @@ public class SpecFilter {
         }
         if (!StringUtils.isBlank(schema.get$ref())) {
             referencedDefinitions.add(schema.get$ref());
+            if (isFilteringSpecVersion32()
+                    && schema.getDiscriminator() != null && !StringUtils.isBlank(schema.getDiscriminator().getDefaultMapping())) {
+                // OpenAPI 3.2: defaultMapping may sit next to $ref and still holds a
+                // schema name or a URI reference that must be kept alive
+                referencedDefinitions.add(schema.getDiscriminator().getDefaultMapping());
+            }
             return;
         }
         if (schema.getDiscriminator() != null && schema.getDiscriminator().getMapping() != null) {
             for (Map.Entry<String, String> mapping : schema.getDiscriminator().getMapping().entrySet()) {
                 referencedDefinitions.add(mapping.getValue());
             }
+        }
+        if (isFilteringSpecVersion32()
+                && schema.getDiscriminator() != null && !StringUtils.isBlank(schema.getDiscriminator().getDefaultMapping())) {
+            // OpenAPI 3.2: defaultMapping may hold a schema name or a URI reference
+            referencedDefinitions.add(schema.getDiscriminator().getDefaultMapping());
         }
 
         if (schema.getProperties() != null) {
@@ -420,15 +445,22 @@ public class SpecFilter {
     }
 
     private void addMediaTypeSchemaRef(MediaType mediaType, Set<String> referencedDefinitions) {
+        addSchemaRef(mediaType.getSchema(), referencedDefinitions);
+        if (!isFilteringSpecVersion32()) {
+            // content-map $ref values, itemSchema and encoding traversal are
+            // OpenAPI 3.2 additions; earlier versions prune exactly as the
+            // baseline did, so schemas referenced only from an encoding header
+            // are not retained
+            return;
+        }
         if (!StringUtils.isBlank(mediaType.get$ref())) {
             // OpenAPI 3.2: a content map value may be a Reference Object; only a
             // schema-targeting ref is relevant to schema pruning
             if (mediaType.get$ref().startsWith(Components.COMPONENTS_SCHEMAS_REF)) {
                 referencedDefinitions.add(mediaType.get$ref());
             }
-            return;
+            // keep traversing: a $ref entry may still carry sibling schema/encoding fields
         }
-        addSchemaRef(mediaType.getSchema(), referencedDefinitions);
         addSchemaRef(mediaType.getItemSchema(), referencedDefinitions);
         if (mediaType.getEncoding() != null) {
             for (Encoding encoding : mediaType.getEncoding().values()) {
@@ -474,9 +506,12 @@ public class SpecFilter {
                 addContentSchemaRef(parameter.getContent(), referencedDefinitions);
             }
         }
-        // readOperations() also covers additionalOperations (OpenAPI 3.2), whose
-        // method names are not needed for schema-reference collection
-        for (Operation op : pathItem.readOperations()) {
+        // a 3.2 document also collects references from additionalOperations;
+        // earlier versions enumerate the fixed operations only, like the baseline
+        Iterable<Operation> operations = isFilteringSpecVersion32()
+                ? pathItem.readOperations()
+                : pathItem.readOperationsMap().values();
+        for (Operation op : operations) {
             if (op.getRequestBody() != null) {
                 addRequestBodySchemaRef(op.getRequestBody(), referencedDefinitions);
             }
@@ -568,7 +603,7 @@ public class SpecFilter {
                 addPathItemSchemaRef(pathItem, referencedDefinitions);
             }
         }
-        if (components.getMediaTypes() != null) {
+        if (isFilteringSpecVersion32() && components.getMediaTypes() != null) {
             for (MediaType mediaType : components.getMediaTypes().values()) {
                 addMediaTypeSchemaRef(mediaType, referencedDefinitions);
             }
@@ -579,33 +614,43 @@ public class SpecFilter {
         if (openApi == null || openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
             return openApi;
         }
-        Set<String> referencedDefinitions = new TreeSet<>();
+        final SpecVersion previousSpecVersion = filterSpecVersion.get();
+        filterSpecVersion.set(specVersionOf(openApi));
+        try {
+            Set<String> referencedDefinitions = new TreeSet<>();
 
-        if (openApi.getPaths() != null) {
-            for (String resourcePath : openApi.getPaths().keySet()) {
-                PathItem pathItem = openApi.getPaths().get(resourcePath);
-                addPathItemSchemaRef(pathItem, referencedDefinitions);
+            if (openApi.getPaths() != null) {
+                for (String resourcePath : openApi.getPaths().keySet()) {
+                    PathItem pathItem = openApi.getPaths().get(resourcePath);
+                    addPathItemSchemaRef(pathItem, referencedDefinitions);
+                }
+            }
+            if (openApi.getWebhooks() != null) {
+                for (String resourcePath : openApi.getWebhooks().keySet()) {
+                    PathItem pathItem = openApi.getWebhooks().get(resourcePath);
+                    addPathItemSchemaRef(pathItem, referencedDefinitions);
+                }
+            }
+            if (openApi.getComponents() != null) {
+                Components components = openApi.getComponents();
+                addComponentsSchemaRef(components, referencedDefinitions);
+            }
+
+            referencedDefinitions.addAll(resolveAllNestedRefs(referencedDefinitions, referencedDefinitions, openApi));
+            openApi.getComponents()
+                    .getSchemas()
+                    .keySet()
+                    .retainAll(referencedDefinitions.stream()
+                            .map(s -> RefUtils.extractSimpleName(s).getLeft())
+                            .collect(Collectors.toSet()));
+            return openApi;
+        } finally {
+            if (previousSpecVersion == null) {
+                filterSpecVersion.remove();
+            } else {
+                filterSpecVersion.set(previousSpecVersion);
             }
         }
-        if (openApi.getWebhooks() != null) {
-            for (String resourcePath : openApi.getWebhooks().keySet()) {
-                PathItem pathItem = openApi.getWebhooks().get(resourcePath);
-                addPathItemSchemaRef(pathItem, referencedDefinitions);
-            }
-        }
-        if (openApi.getComponents() != null) {
-            Components components = openApi.getComponents();
-            addComponentsSchemaRef(components, referencedDefinitions);
-        }
-
-        referencedDefinitions.addAll(resolveAllNestedRefs(referencedDefinitions, referencedDefinitions, openApi));
-        openApi.getComponents()
-                .getSchemas()
-                .keySet()
-                .retainAll(referencedDefinitions.stream()
-                        .map(s -> RefUtils.extractSimpleName(s).getLeft())
-                        .collect(Collectors.toSet()));
-        return openApi;
     }
 
     protected Set<String> resolveAllNestedRefs(Set<String> refs, Set<String> accumulatedRefs, OpenAPI openApi) {

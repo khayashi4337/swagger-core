@@ -49,7 +49,7 @@ public class ApiResponse {
     /**
      * returns the summary property from a ApiResponse instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String summary
      **/
 

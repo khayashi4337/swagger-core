@@ -79,11 +79,20 @@ public abstract class AbstractOpenAPIExtension implements OpenAPIExtension {
     @Override
     public void setOpenAPI31(boolean openapi31) {
         this.openapi31 = openapi31;
+        if (explicitConfiguration) {
+            // the last call wins: a setter invoked after setConfiguration()
+            // overrides the value the configuration brought in, so the stored
+            // configuration follows the most recent call
+            configuration.setOpenAPI31(openapi31);
+        }
     }
 
     @Override
     public void setSchemaResolution(Schema.SchemaResolution schemaResolution) {
         this.schemaResolution = schemaResolution;
+        if (explicitConfiguration) {
+            configuration.setSchemaResolution(schemaResolution);
+        }
     }
     @Override
     public void setConfiguration(Configuration configuration) {

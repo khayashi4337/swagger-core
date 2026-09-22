@@ -28,7 +28,7 @@ public class MediaType {
      * (e.g. {@code "application/json": {"$ref": "#/components/mediaTypes/Pet"}}).
      * When set, the other fields are ignored per Reference Object semantics.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private String $ref = null;
@@ -36,7 +36,7 @@ public class MediaType {
      * Positional encoding for multipart array parts (OpenAPI 3.2, multipart media
      * types only). MUST NOT coexist with {@code encoding}.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private List<Encoding> prefixEncoding = null;
@@ -45,7 +45,7 @@ public class MediaType {
      * (OpenAPI 3.2, multipart media types only). MUST NOT coexist with
      * {@code encoding}.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private Encoding itemEncoding = null;
@@ -75,7 +75,7 @@ public class MediaType {
     /**
      * returns the itemSchema property from a MediaType instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return Schema itemSchema
      **/
 
@@ -179,7 +179,7 @@ public class MediaType {
     /**
      * returns the prefixEncoding property from a MediaType instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return List&lt;Encoding&gt; prefixEncoding
      **/
 
@@ -210,7 +210,7 @@ public class MediaType {
     /**
      * returns the itemEncoding property from a MediaType instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return Encoding itemEncoding
      **/
 
@@ -233,7 +233,7 @@ public class MediaType {
     /**
      * returns the $ref property from a MediaType instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String $ref
      **/
 

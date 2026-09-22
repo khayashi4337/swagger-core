@@ -100,7 +100,7 @@ public class OAuthFlows {
     /**
      * returns the deviceAuthorization property from a OAuthFlows instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return OAuthFlow deviceAuthorization
      **/
 

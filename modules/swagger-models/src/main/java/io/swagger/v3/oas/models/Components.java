@@ -50,7 +50,7 @@ public class Components {
      * Reusable media types; values are Media Type Objects or Reference Objects
      * ({@code $ref}-only MediaType) (OpenAPI 3.2).
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private Map<String, io.swagger.v3.oas.models.media.MediaType> mediaTypes;
@@ -332,7 +332,7 @@ public class Components {
     /**
      * returns the mediaTypes property from a Components instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return Map&lt;String, MediaType&gt; mediaTypes
      **/
     @OpenAPI32

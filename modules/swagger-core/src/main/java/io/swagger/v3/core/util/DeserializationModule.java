@@ -42,6 +42,8 @@ public class DeserializationModule extends SimpleModule {
         this.addDeserializer(Paths.class, new PathsDeserializer());
         this.addDeserializer(Callback.class, new CallbackDeserializer());
 
+        this.addSerializer(Parameter.StyleEnum.class, new ParameterStyleSerializer());
+
         this.setDeserializerModifier(new ValueDeserializerModifier()
         {
             @Override public ValueDeserializer<?> modifyDeserializer(DeserializationConfig config, BeanDescription.Supplier beanDescRef, ValueDeserializer<?> deserializer) {

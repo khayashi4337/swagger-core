@@ -37,7 +37,7 @@ public class Parameter {
         PIPEDELIMITED("pipeDelimited"),
         DEEPOBJECT("deepObject"),
         /**
-         * @since 2.2.56 (OpenAPI 3.2)
+         * @since 3.0.1 (OpenAPI 3.2)
          */
         COOKIE("cookie");
 

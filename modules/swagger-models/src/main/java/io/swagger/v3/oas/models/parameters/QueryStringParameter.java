@@ -11,7 +11,7 @@ import java.util.Objects;
  * `in: querystring` parameter is allowed per operation or path item. These rules
  * are not enforced by the model itself.
  *
- * @since 2.2.56 (OpenAPI 3.2)
+ * @since 3.0.1 (OpenAPI 3.2)
  */
 
 public class QueryStringParameter extends Parameter {

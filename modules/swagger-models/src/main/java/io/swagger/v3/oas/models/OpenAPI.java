@@ -26,7 +26,7 @@ import java.util.Objects;
 public class OpenAPI {
     private String openapi = "3.0.1";
     /**
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private String $self = null;
@@ -91,7 +91,7 @@ public class OpenAPI {
     /**
      * returns the $self property from a OpenAPI instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String $self
      **/
 

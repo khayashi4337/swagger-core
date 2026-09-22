@@ -613,6 +613,11 @@ The OpenAPI 3.2 mappers `Json32.mapper()` and `Yaml32.mapper()` behave the same 
 the `MapperTarget.JSON32`/`YAML32` targets; `MapperTarget.isOpenapi31()` means "3.1 or later" and returns true for
 the 3.2 targets as well.
 
+**Known output difference (OpenAPI 3.1 conversion):** when a 3.0 document is converted to 3.1
+(`OpenAPI31SpecFilter` / `OpenAPISchema2JsonSchema`), `discriminator` extensions are now emitted as flat
+`x-…` properties instead of a nested `extensions` object. This is an intentional fix — Discriminator
+extensions are permitted in 3.1 — but it changes the converted output compared to 2.x.
+
 **Best practice:** Register all customizers at application startup, before any mapper is used.
 This avoids rebuilds and ensures all components see the same mapper configuration.
 

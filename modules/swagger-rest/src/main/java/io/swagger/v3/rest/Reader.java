@@ -425,10 +425,10 @@ public class Reader implements OpenApiReader {
         final List<Parameter> globalParameters = new ArrayList<>();
 
         // look for constructor-level annotated properties
-        globalParameters.addAll(ReaderUtils.collectConstructorParameters(cls, components, classConsumes, null, config.getSchemaResolution(), openapi31));
+        globalParameters.addAll(ReaderUtils.collectConstructorParameters(cls, components, classConsumes, null, config.getSchemaResolution(), openapi31, config.toConfiguration()));
 
         // look for field-level annotated properties
-        globalParameters.addAll(ReaderUtils.collectFieldParameters(cls, components, classConsumes, null));
+        globalParameters.addAll(ReaderUtils.collectFieldParameters(cls, components, classConsumes, null, config.toConfiguration()));
 
         // Make sure that the class methods are sorted for deterministic order
         // See https://docs.oracle.com/javase/8/docs/api/java/lang/Class.html#getMethods--

@@ -85,7 +85,7 @@ public class XML {
      * {@code none}. Mutually exclusive with the deprecated {@code attribute} and
      * {@code wrapped} fields in 3.2 documents.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String nodeType
      **/
 

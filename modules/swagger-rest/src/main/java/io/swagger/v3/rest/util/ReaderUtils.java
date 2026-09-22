@@ -1,6 +1,7 @@
 package io.swagger.v3.rest.util;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import io.swagger.v3.core.util.Configuration;
 import io.swagger.v3.core.util.ParameterProcessor;
 import io.swagger.v3.core.util.ReflectionUtils;
 import io.swagger.v3.rest.ext.OpenAPIExtension;
@@ -51,8 +52,20 @@ public class ReaderUtils {
      * @return the collection of supported parameters
      */
     public static List<Parameter> collectConstructorParameters(Class<?> cls, Components components, jakarta.ws.rs.Consumes classConsumes, JsonView jsonViewAnnotation, Schema.SchemaResolution schemaResolution, boolean openapi31) {
+        return collectConstructorParameters(cls, components, classConsumes, jsonViewAnnotation, schemaResolution, openapi31, null);
+    }
+
+    public static List<Parameter> collectConstructorParameters(Class<?> cls, Components components, jakarta.ws.rs.Consumes classConsumes, JsonView jsonViewAnnotation, Schema.SchemaResolution schemaResolution, boolean openapi31, Configuration configuration) {
         if (cls.isLocalClass() || (cls.isMemberClass() && !Modifier.isStatic(cls.getModifiers()))) {
             return Collections.emptyList();
+        }
+        final Configuration effectiveConfiguration;
+        if (configuration != null) {
+            effectiveConfiguration = configuration;
+        } else {
+            effectiveConfiguration = new Configuration();
+            effectiveConfiguration.setOpenAPI31(openapi31);
+            effectiveConfiguration.setSchemaResolution(schemaResolution);
         }
 
         List<Parameter> selected = Collections.emptyList();
@@ -75,7 +88,10 @@ public class ReaderUtils {
                     paramsCount++;
                 } else {
                     final Type genericParameterType = genericParameterTypes[i];
-                    final List<Parameter> tmpParameters = collectParameters(genericParameterType, tmpAnnotations, components, classConsumes, jsonViewAnnotation);
+                    // only a caller-provided configuration is pushed to the extension;
+                    // legacy signatures (configuration == null) leave the extension's
+                    // own settings untouched, like collectFieldParameters does
+                    final List<Parameter> tmpParameters = collectParameters(genericParameterType, tmpAnnotations, components, classConsumes, jsonViewAnnotation, configuration);
                     if (! tmpParameters.isEmpty()) {
                         for (Parameter tmpParameter : tmpParameters) {
                             Parameter processedParameter = ParameterProcessor.applyAnnotations(
@@ -86,8 +102,7 @@ public class ReaderUtils {
                                     classConsumes == null ? new String[0] : classConsumes.value(),
                                     null,
                                     jsonViewAnnotation,
-                                    openapi31,
-                                    schemaResolution);
+                                    effectiveConfiguration);
                             if (processedParameter != null) {
                                 parameters.add(processedParameter);
                             }
@@ -114,19 +129,35 @@ public class ReaderUtils {
      * @return the collection of supported parameters
      */
     public static List<Parameter> collectFieldParameters(Class<?> cls, Components components, jakarta.ws.rs.Consumes classConsumes, JsonView jsonViewAnnotation) {
+        return collectFieldParameters(cls, components, classConsumes, jsonViewAnnotation, null);
+    }
+
+    public static List<Parameter> collectFieldParameters(Class<?> cls, Components components, jakarta.ws.rs.Consumes classConsumes, JsonView jsonViewAnnotation, Configuration configuration) {
         final List<Parameter> parameters = new ArrayList<>();
         for (Field field : ReflectionUtils.getDeclaredFields(cls)) {
             final List<Annotation> annotations = Arrays.asList(field.getAnnotations());
             final Type genericType = field.getGenericType();
-            parameters.addAll(collectParameters(genericType, annotations, components, classConsumes, jsonViewAnnotation));
+            parameters.addAll(collectParameters(genericType, annotations, components, classConsumes, jsonViewAnnotation, configuration));
         }
         return parameters;
     }
 
     private static List<Parameter> collectParameters(Type type, List<Annotation> annotations, Components components, jakarta.ws.rs.Consumes classConsumes, JsonView jsonViewAnnotation) {
+        return collectParameters(type, annotations, components, classConsumes, jsonViewAnnotation, null);
+    }
+
+    private static List<Parameter> collectParameters(Type type, List<Annotation> annotations, Components components, jakarta.ws.rs.Consumes classConsumes, JsonView jsonViewAnnotation, Configuration configuration) {
         final Iterator<OpenAPIExtension> chain = OpenAPIExtensions.chain();
-        return chain.hasNext() ? chain.next().extractParameters(annotations, type, new HashSet<>(), components, classConsumes, null, false, jsonViewAnnotation, chain).parameters :
-                Collections.emptyList();
+        if (!chain.hasNext()) {
+            return Collections.emptyList();
+        }
+        OpenAPIExtension extension = chain.next();
+        // align the extension with the caller's values on every call: the scan
+        // configuration when provided, otherwise null, which clears a
+        // configuration a previous scan left behind so a stale scan version
+        // (e.g. 3.2) cannot leak into legacy calls
+        extension.setConfiguration(configuration);
+        return extension.extractParameters(annotations, type, new HashSet<>(), components, classConsumes, null, false, jsonViewAnnotation, chain).parameters;
     }
 
     private static boolean isContext(List<Annotation> annotations) {

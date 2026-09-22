@@ -226,7 +226,7 @@ public class SecurityScheme {
     /**
      * returns the oauth2MetadataUrl property from a SecurityScheme instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return String oauth2MetadataUrl
      **/
 
@@ -249,7 +249,7 @@ public class SecurityScheme {
     /**
      * returns the deprecated property from a SecurityScheme instance.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return Boolean deprecated
      **/
 

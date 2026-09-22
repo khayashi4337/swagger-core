@@ -37,7 +37,7 @@ public class PathItem {
      * entries for methods covered by the fixed fields (get/put/post/delete/options/
      * head/patch/trace/query); this is not enforced by the model itself.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     // OpenAPI 3.2 only; keys must not collide with the fixed operation fields
@@ -273,7 +273,7 @@ public class PathItem {
      * {@code trace}, {@code query}) or other fixed Path Item fields, because a
      * colliding key would produce an invalid or ambiguous document.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      * @return Map&lt;String, Operation&gt; additionalOperations
      **/
 

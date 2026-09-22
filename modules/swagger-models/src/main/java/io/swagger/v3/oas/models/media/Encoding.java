@@ -25,7 +25,7 @@ public class Encoding {
      * Nested encoding for object properties (OpenAPI 3.2). MUST NOT coexist with
      * {@code prefixEncoding}/{@code itemEncoding}.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private Map<String, Encoding> encoding;
@@ -33,7 +33,7 @@ public class Encoding {
      * Positional encoding for multipart array parts (OpenAPI 3.2). MUST NOT coexist
      * with {@code encoding}.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private List<Encoding> prefixEncoding;
@@ -41,7 +41,7 @@ public class Encoding {
      * Encoding applied to array items beyond the {@code prefixEncoding} positions
      * (OpenAPI 3.2). MUST NOT coexist with {@code encoding}.
      *
-     * @since 2.2.56 (OpenAPI 3.2)
+     * @since 3.0.1 (OpenAPI 3.2)
      */
     @OpenAPI32
     private Encoding itemEncoding;

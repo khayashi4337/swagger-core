@@ -6,6 +6,7 @@ import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.core.converter.ResolvedSchema;
 import io.swagger.v3.core.jackson.ModelResolver;
 import io.swagger.v3.oas.annotations.enums.Explode;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -80,6 +81,7 @@ public class ParameterProcessor {
             Configuration configuration) {
 
         boolean openapi31 = configuration != null && configuration.isOpenAPI31() != null && configuration.isOpenAPI31();
+        boolean openapi32 = isOpenAPI32(configuration);
         Schema.SchemaResolution schemaResolution = configuration.getSchemaResolution();
         final AnnotationsHelper helper = new AnnotationsHelper(annotations, type);
         if (helper.isContext()) {
@@ -197,6 +199,11 @@ public class ParameterProcessor {
                     parameter.setName(p.name());
                 }
                 if (StringUtils.isNotBlank(p.in().toString())) {
+                    if (p.in() == ParameterIn.QUERYSTRING && !openapi32) {
+                        // 'querystring' is an OpenAPI 3.2 'in' value; drop the parameter
+                        // rather than emit an unrepresentable value for earlier versions
+                        return null;
+                    }
                     parameter.setIn(p.in().toString());
                 }
                 if (StringUtils.isNotBlank(p.example())) {
