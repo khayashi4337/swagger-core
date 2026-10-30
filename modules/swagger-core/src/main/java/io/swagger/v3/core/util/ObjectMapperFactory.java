@@ -34,6 +34,7 @@ import io.swagger.v3.core.jackson.mixin.MediaTypeMixin;
 import io.swagger.v3.core.jackson.mixin.OpenAPI31Mixin;
 import io.swagger.v3.core.jackson.mixin.OpenAPIMixin;
 import io.swagger.v3.core.jackson.mixin.OperationMixin;
+import io.swagger.v3.core.jackson.mixin.PathItem32Mixin;
 import io.swagger.v3.core.jackson.mixin.PathItemMixin;
 import io.swagger.v3.core.jackson.mixin.Schema31Mixin;
 import io.swagger.v3.core.jackson.mixin.SchemaConverterMixin;
@@ -296,6 +297,22 @@ public class ObjectMapperFactory {
         return createYaml(SpecVersion.V31);
     }
 
+    public static ObjectMapper createJson32(JsonFactory jsonFactory) {
+        return create(jsonFactory, SpecVersion.V32);
+    }
+
+    public static ObjectMapper createJson32() {
+        return create(null, SpecVersion.V32);
+    }
+
+    public static ObjectMapper createYaml32(YAMLFactory yamlFactory) {
+        return create(yamlFactory, SpecVersion.V32);
+    }
+
+    public static ObjectMapper createYaml32() {
+        return createYaml(SpecVersion.V32);
+    }
+
     /**
      * @deprecated Use {@link #create(TokenStreamFactory, SpecVersion)} instead
      */
@@ -344,6 +361,7 @@ public class ObjectMapperFactory {
                 });
                 break;
             case V31:
+            case V32:
                 mapperBuilder.addModule(new SimpleModule() {
                     @Override
                     public void setupModule(SetupContext context) {
@@ -365,6 +383,8 @@ public class ObjectMapperFactory {
                     }
                 });
                 break;
+            default:
+                throw new IllegalArgumentException("Unknown specVersion: " + specVersion);
         }
 
         switch (specVersion) {
@@ -374,6 +394,11 @@ public class ObjectMapperFactory {
             case V31:
                 mapperBuilder.addModule(new DeserializationModule31());
                 break;
+            case V32:
+                mapperBuilder.addModule(new DeserializationModule32());
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown specVersion: " + specVersion);
         }
 
         Map<Class<?>, Class<?>> sourceMixins = new LinkedHashMap<>();
@@ -417,13 +442,20 @@ public class ObjectMapperFactory {
                 sourceMixins.put(Discriminator.class, DiscriminatorMixin.class);
                 break;
             case V31:
+            case V32:
                 sourceMixins.put(Info.class, ExtensionsMixin.class);
                 sourceMixins.put(Schema.class, Schema31Mixin.class);
                 sourceMixins.put(Components.class, Components31Mixin.class);
                 sourceMixins.put(OpenAPI.class, OpenAPI31Mixin.class);
                 sourceMixins.put(DateSchema.class, DateSchemaMixin.class);
                 sourceMixins.put(Discriminator.class, Discriminator31Mixin.class);
+                if (specVersion == SpecVersion.V32) {
+                    // 'query' is a fixed Path Item field as of 3.2, so it is not ignored here
+                    sourceMixins.put(PathItem.class, PathItem32Mixin.class);
+                }
                 break;
+            default:
+                throw new IllegalArgumentException("Unknown specVersion: " + specVersion);
         }
         mapperBuilder.addMixIns(sourceMixins);
         configureSwaggerPolicy(mapperBuilder);
@@ -440,6 +472,8 @@ public class ObjectMapperFactory {
                 return yaml ? MapperTarget.YAML : MapperTarget.JSON;
             case V31:
                 return yaml ? MapperTarget.YAML31 : MapperTarget.JSON31;
+            case V32:
+                return yaml ? MapperTarget.YAML32 : MapperTarget.JSON32;
             default:
                 throw new IllegalArgumentException("Unknown specVersion: " + specVersion);
         }

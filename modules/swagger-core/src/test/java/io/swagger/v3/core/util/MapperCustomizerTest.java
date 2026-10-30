@@ -55,6 +55,8 @@ public class MapperCustomizerTest {
         Yaml.reset();
         Json31.reset();
         Yaml31.reset();
+        Json32.reset();
+        Yaml32.reset();
     }
 
     @Test
@@ -70,8 +72,10 @@ public class MapperCustomizerTest {
         assertEquals(Json.mapper().writeValueAsString(new Marker()), "\"customized\"");
         assertEquals(Json31.mapper().writeValueAsString(new Marker()), "\"customized\"");
         assertEquals(Json31.converterMapper().writeValueAsString(new Marker()), "\"customized\"");
+        assertEquals(Json32.mapper().writeValueAsString(new Marker()), "\"customized\"");
         assertEquals(Yaml.mapper().writeValueAsString(new Marker()).trim(), "customized");
         assertEquals(Yaml31.mapper().writeValueAsString(new Marker()).trim(), "customized");
+        assertEquals(Yaml32.mapper().writeValueAsString(new Marker()).trim(), "customized");
     }
 
     @Test
@@ -83,11 +87,14 @@ public class MapperCustomizerTest {
         Yaml.mapper();
         Json31.mapper();
         Yaml31.mapper();
+        Json32.mapper();
+        Yaml32.mapper();
         Json31.converterMapper();
 
         assertEquals(EnumSet.copyOf(seen), EnumSet.allOf(MapperTarget.class));
         assertTrue(Yaml.mapper() instanceof YAMLMapper);
         assertTrue(Yaml31.mapper() instanceof YAMLMapper);
+        assertTrue(Yaml32.mapper() instanceof YAMLMapper);
     }
 
     @Test

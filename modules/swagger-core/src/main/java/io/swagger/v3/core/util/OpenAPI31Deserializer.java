@@ -10,21 +10,29 @@ import tools.jackson.databind.ValueDeserializer;
 
 public class OpenAPI31Deserializer extends DelegatingDeserializer {
 
+    private final SpecVersion specVersion;
+
     public OpenAPI31Deserializer(ValueDeserializer<?> defaultDeserializer)
     {
+        this(defaultDeserializer, SpecVersion.V31);
+    }
+
+    protected OpenAPI31Deserializer(ValueDeserializer<?> defaultDeserializer, SpecVersion specVersion)
+    {
         super(defaultDeserializer);
+        this.specVersion = specVersion;
     }
 
     @Override
     protected ValueDeserializer<?> newDelegatingInstance(ValueDeserializer<?> newDelegatee) {
-        return new OpenAPI31Deserializer(newDelegatee);
+        return new OpenAPI31Deserializer(newDelegatee, specVersion);
     }
 
     @Override
     public OpenAPI deserialize(JsonParser jp, DeserializationContext ctxt)
             throws JacksonException {
         OpenAPI openAPI = (OpenAPI) super.deserialize(jp, ctxt);
-        openAPI.setSpecVersion(SpecVersion.V31);
+        openAPI.setSpecVersion(specVersion);
         return openAPI;
     }
 }

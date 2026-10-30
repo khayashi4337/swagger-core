@@ -4,6 +4,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 import io.swagger.v3.oas.models.media.ArbitrarySchema;
@@ -21,6 +22,7 @@ import io.swagger.v3.oas.models.media.MapSchema;
 import io.swagger.v3.oas.models.media.NumberSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.PasswordSchema;
+import io.swagger.v3.oas.models.SpecVersion;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.media.TimeLocalSchema;
@@ -69,7 +71,13 @@ public class ModelDeserializer extends ValueDeserializer<Schema> {
         }
     }
 
+    /**
+     * @deprecated kept for subclasses compiled against it; the version is read through
+     * {@link #specVersion()} so that subclasses can also express versions newer than 3.1.
+     */
+    @Deprecated
     protected boolean openapi31 = false;
+
     @Override
     public Schema deserialize(JsonParser jp, DeserializationContext ctxt)
             throws JacksonException {
@@ -77,7 +85,7 @@ public class ModelDeserializer extends ValueDeserializer<Schema> {
 
         Schema schema;
 
-        if (openapi31) {
+        if (specVersion() != SpecVersion.V30) {
             schema = deserializeJsonSchema(node);
             return schema;
         }
@@ -153,7 +161,7 @@ public class ModelDeserializer extends ValueDeserializer<Schema> {
             if (additionalProperties != null) {
                 ((ObjectNode)node).remove(ADDITIONAL_PROPERTIES);
             }
-            schema = Json31.mapper().convertValue(node, JsonSchema.class);
+            schema = mapper().convertValue(node, JsonSchema.class);
             if (type instanceof StringNode) {
                 schema.types(new LinkedHashSet<>(Arrays.asList(type.stringValue(null))));
             } else if (type instanceof ArrayNode arrayNode){
@@ -172,13 +180,13 @@ public class ModelDeserializer extends ValueDeserializer<Schema> {
                         schema.setAdditionalProperties(innerSchema);
                     }
                 } catch (Exception e) {
-                    Boolean additionalPropsBoolean = Json31.mapper().convertValue(additionalProperties, Boolean.class);
+                    Boolean additionalPropsBoolean = mapper().convertValue(additionalProperties, Boolean.class);
                     schema.setAdditionalProperties(additionalPropsBoolean);
                 }
             }
 
         } else {
-            schema = Json31.mapper().convertValue(node, JsonSchema.class);
+            schema = mapper().convertValue(node, JsonSchema.class);
         }
         return schema;
     }
@@ -235,5 +243,17 @@ public class ModelDeserializer extends ValueDeserializer<Schema> {
     private String getRefAsString(JsonNode jsonNode) {
         JsonNode ref = jsonNode.get(REF);
         return ref.isValueNode() ? ref.asString() : "";
+    }
+
+    /**
+     * Returns the spec version this deserializer targets. "3.1 or later" semantics are
+     * shared by 3.2; subclasses override this to support newer versions.
+     */
+    protected SpecVersion specVersion() {
+        return openapi31 ? SpecVersion.V31 : SpecVersion.V30;
+    }
+
+    protected ObjectMapper mapper() {
+        return SpecVersionMappers.mapper(specVersion());
     }
 }
