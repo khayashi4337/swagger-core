@@ -44,8 +44,20 @@ public class SpecFilter {
         if (filteredOpenAPI == null) {
             return filteredOpenAPI;
         }
-        this.filterSpecVersion = specVersionOf(filteredOpenAPI);
+        final SpecVersion previousSpecVersion = filterSpecVersion.get();
+        filterSpecVersion.set(specVersionOf(filteredOpenAPI));
+        try {
+            return filterCloned(openAPI, filter, filteredOpenAPI, params, cookies, headers);
+        } finally {
+            if (previousSpecVersion == null) {
+                filterSpecVersion.remove();
+            } else {
+                filterSpecVersion.set(previousSpecVersion);
+            }
+        }
+    }
 
+    private OpenAPI filterCloned(OpenAPI openAPI, OpenAPISpecFilter filter, OpenAPI filteredOpenAPI, Map<String, List<String>> params, Map<String, String> cookies, Map<String, List<String>> headers) {
         OpenAPI clone = new OpenAPI();
         clone.info(filteredOpenAPI.getInfo());
         clone.openapi(filteredOpenAPI.getOpenapi());
@@ -226,18 +238,24 @@ public class SpecFilter {
 
     }
 
-    // spec version of the document currently being filtered; set by filter() so the
-    // protected five-argument filterComponentsSchema signature stays intact for overrides
-    private SpecVersion filterSpecVersion;
+    // spec version of the document being filtered on this thread; filter() saves the
+    // previous value, sets the document's own and restores it on exit, so nested or
+    // concurrent filter() calls on the same instance cannot mix versions. Kept as state
+    // (rather than a parameter) so the protected five-argument filterComponentsSchema
+    // signature stays intact for overrides
+    private final ThreadLocal<SpecVersion> filterSpecVersion = new ThreadLocal<>();
 
     protected Map<String, Schema> filterComponentsSchema(OpenAPISpecFilter filter, Map<String, Schema> schemasMap, Map<String, List<String>> params, Map<String, String> cookies, Map<String, List<String>> headers) {
-        return filterComponentsSchema(filter, schemasMap, params, cookies, headers, filterSpecVersion);
+        return filterComponentsSchema(filter, schemasMap, params, cookies, headers, filterSpecVersion.get());
     }
 
     /**
      * Derives the effective spec version of a document. The {@code openapi} string is
      * authoritative (programmatically built docs often leave {@code specVersion} at
-     * its default); the field is the fallback.
+     * its default); the field is the fallback. Note this means
+     * {@code new OpenAPI(SpecVersion.V32)} alone still resolves to 3.0 because the
+     * default {@code openapi} value is {@code "3.0.1"} — call
+     * {@code setOpenapi("3.2.0")} as well to mark a document as 3.2.
      */
     private SpecVersion specVersionOf(OpenAPI openAPI) {
         if (openAPI == null) {

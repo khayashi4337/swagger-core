@@ -8,10 +8,12 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Lazily-built, replaceable holder for the mappers exposed by {@link Json}, {@link Yaml}, {@link Json31} and
- * {@link Yaml31}. A mapper built from the factory is rebuilt when {@link ObjectMapperFactory#generation()} moves
- * (i.e. customizers were added or removed); a mapper explicitly installed with {@link #set(ObjectMapper)} is kept
- * until {@link #reset()}.
+ * Lazily-built, replaceable holder for the mappers exposed by {@link Json}, {@link Yaml}, {@link Json31},
+ * {@link Yaml31}, {@link Json32} and {@link Yaml32}. The "3.1" family names predate 3.2 support:
+ * {@link MapperTarget#isOpenapi31()} means "3.1 or later" and also covers {@link MapperTarget#JSON32} and
+ * {@link MapperTarget#YAML32}. A mapper built from the factory is rebuilt when
+ * {@link ObjectMapperFactory#generation()} moves (i.e. customizers were added or removed); a mapper explicitly
+ * installed with {@link #set(ObjectMapper)} is kept until {@link #reset()}.
  */
 final class MapperHolder {
 

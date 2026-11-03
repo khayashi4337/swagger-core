@@ -33,8 +33,10 @@ public abstract class ObjectMapperFactoryTestBase {
         ObjectMapperFactory.setJackson2Compatibility(false);
         Json.reset();
         Json31.reset();
+        Json32.reset();
         Yaml.reset();
         Yaml31.reset();
+        Yaml32.reset();
     }
 
     /** Public mappers (JSON and YAML) followed by the strict generic mapper. */

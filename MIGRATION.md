@@ -609,6 +609,10 @@ class MyComponent {
 
 **Affected APIs:** `Json.mapper()`, `Yaml.mapper()`, `Json31.mapper()`, `Yaml31.mapper()`, `Json31.converterMapper()`
 
+The OpenAPI 3.2 mappers `Json32.mapper()` and `Yaml32.mapper()` behave the same way and are customized through
+the `MapperTarget.JSON32`/`YAML32` targets; `MapperTarget.isOpenapi31()` means "3.1 or later" and returns true for
+the 3.2 targets as well.
+
 **Best practice:** Register all customizers at application startup, before any mapper is used.
 This avoids rebuilds and ensures all components see the same mapper configuration.
 
